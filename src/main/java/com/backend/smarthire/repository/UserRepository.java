@@ -19,4 +19,26 @@ public class UserRepository {
 
         System.out.println("✅ SUCCESS: " + user.getRole() + " saved to Neon Database!");
     }
+
+    public User findByEmail(String email){
+        String sql="SELECT * FROM users WHERE email = ?";
+        try{
+            // queryForObject is used when we expect exactly ONE result back (not a List)
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+                User user = new User();
+                user.setId(rs.getLong("id"));
+                user.setEmail(rs.getString("email"));
+                user.setPassword(rs.getString("password"));
+                user.setRole(rs.getString("role"));
+                return user;
+            }, email); // The email fills in the '?'
+        }
+        catch (Exception e){
+            return null;
+        }
+
+    }
+
 }
+
+

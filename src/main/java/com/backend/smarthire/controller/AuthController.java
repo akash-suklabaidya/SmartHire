@@ -25,4 +25,16 @@ public class AuthController {
         User savedUSer=userService.registerUser(user);
         return ResponseEntity.ok(new ApiResponse<>(true, "Registration successful!", savedUSer));
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<String>> loginUser(@RequestBody User user){
+        try{
+            String resultMessage=userService.loginUser(user);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Success", resultMessage));
+        }
+        catch(Exception e){
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false,e.getMessage(),null));
+        }
+
+    }
 }

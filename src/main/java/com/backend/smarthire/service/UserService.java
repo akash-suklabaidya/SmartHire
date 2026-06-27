@@ -23,4 +23,18 @@ public class UserService {
         return user;
     }
 
+    public String loginUser(User loginRequest){
+        User existingUser=userRepository.findByEmail(loginRequest.getEmail());
+        if (existingUser == null) {
+            throw new RuntimeException("Error: User not found!");
+        }
+        boolean isPasswordMatch=passwordEncoder.matches(loginRequest.getPassword(),existingUser.getPassword());
+        if (isPasswordMatch) {
+            return "Login Successful! Welcome back, " + existingUser.getRole();
+        } else {
+            throw new RuntimeException("Error: Invalid password!");
+        }
+    }
+
+
 }
