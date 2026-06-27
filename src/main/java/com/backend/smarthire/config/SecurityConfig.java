@@ -1,17 +1,25 @@
 package com.backend.smarthire.config;
 
+import com.backend.smarthire.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final JwtFilter jwtFilter;
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -20,14 +28,18 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                // 1. Disable CSRF so we can send POST requests from PowerShell/Postman
-                .csrf(AbstractHttpConfigurer::disable)
-
-                // 2. Tell Spring Security to permit ALL requests without a password (for now)
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
-                );
+        http.csrf(csrf->csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth->auth
+                        // Anyone can register or log in
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // ONLY a Recruiter can post a new job!
+                        .requestMatchers(HttpMethod.POST,"/api/jobs").hasRole("RECRUITER")
+                        // Any other request (like GET /api/jobs) just requires a valid token
+                        .anyRequest().authenticated()
+                ).
+                // Put our custom JWT filter in front of Spring's default security
+                addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

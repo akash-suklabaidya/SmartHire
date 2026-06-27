@@ -2,6 +2,7 @@ package com.backend.smarthire.service;
 
 import com.backend.smarthire.model.User;
 import com.backend.smarthire.repository.UserRepository;
+import com.backend.smarthire.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -9,8 +10,10 @@ import org.springframework.stereotype.Service;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+        this.jwtUtil=jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder=passwordEncoder;
     }
@@ -30,7 +33,7 @@ public class UserService {
         }
         boolean isPasswordMatch=passwordEncoder.matches(loginRequest.getPassword(),existingUser.getPassword());
         if (isPasswordMatch) {
-            return "Login Successful! Welcome back, " + existingUser.getRole();
+            return jwtUtil.generateToken(existingUser.getEmail(),existingUser.getRole());
         } else {
             throw new RuntimeException("Error: Invalid password!");
         }
