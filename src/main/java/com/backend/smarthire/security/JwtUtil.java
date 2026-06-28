@@ -10,7 +10,8 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private final Key key= Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final String SECRET = "SmartHireSuperSecretKeyForJwtGeneration12345!";
+    private final Key key=Keys.hmacShaKeyFor(SECRET.getBytes());
 
     // Set the token to expire in 24 hours (86,400,000 milliseconds)
     private final long expirationTime = 86400000;
