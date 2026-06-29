@@ -16,9 +16,9 @@ public class ProfileRepository {
         String sql = "INSERT INTO candidate_profiles (user_id, headline, skills, resume_text) " +
                 "VALUES (?, ?, ?, ?) " +
                 "ON CONFLICT (user_id) DO UPDATE SET " +
-                "headline = EXCLUDED.headline, " +
-                "skills = EXCLUDED.skills, " +
-                "resume_text = EXCLUDED.resume_text, " +
+                "headline = COALESCE(EXCLUDED.headline, candidate_profiles.headline), " +
+                "skills = COALESCE(EXCLUDED.skills, candidate_profiles.skills), " +
+                "resume_text = COALESCE(EXCLUDED.resume_text, candidate_profiles.resume_text), " +
                 "updated_at = CURRENT_TIMESTAMP";
 
         jdbcTemplate.update(sql,
@@ -27,6 +27,14 @@ public class ProfileRepository {
                 profile.getSkills(),
                 profile.getResumeText()
         );
+    }
+
+    public void upsertResumeText(Long userId, String resumeText){
+        String sql = "INSERT INTO candidate_profiles (user_id, resume_text) " +
+                "VALUES (?, ?) " +
+                "ON CONFLICT (user_id) " +
+                "DO UPDATE SET resume_text = EXCLUDED.resume_text";
+        jdbcTemplate.update(sql, userId, resumeText);
     }
 
 }
