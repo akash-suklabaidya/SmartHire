@@ -21,9 +21,11 @@ public class ApplicationRepository {
     }
 
     public List<Map<String, Object>> getApplicantsForJob(Long jobId) {
-        String sql = "SELECT u.email, a.applied_at " +
+        String sql = "SELECT u.email, a.applied_at, " +
+                "cp.headline, cp.skills, cp.resume_text " +
                 "FROM users u " +
                 "JOIN applications a ON u.id = a.user_id " +
+                "LEFT JOIN candidate_profiles cp ON u.id = cp.user_id " +
                 "WHERE a.job_id = ?";
         return jdbcTemplate.queryForList(sql,jobId);
     }

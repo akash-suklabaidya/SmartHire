@@ -34,4 +34,14 @@ public class JobRepository {
         });
     }
 
+    public String getJobDescription(Long jobId) {
+        String sql="SELECT description FROM jobs WHERE id = ?";
+        try{
+            return jdbcTemplate.queryForObject(sql, String.class, jobId);
+        }
+        catch (Exception e){
+            return ""; // Return empty string if job description is missing
+        }
+    }
+
 }

@@ -5,10 +5,16 @@ spring:
     # Notice we changed 'postgresql://' to 'jdbc:postgresql://' so Java understands it
     url: jdbc:postgresql://ep-dry-resonance-ataz0j8h.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require
     username: neondb_owner
-    password: npg_5GyZdPorAv8S
+    password: change-me
     driver-class-name: org.postgresql.Driver
 
   # This tells Spring to print SQL queries to the console (great for learning!)
   sql:
     init:
       mode: always
+
+
+openai:
+  api:
+    key: change-me
+  model: gpt-5.4-mini
