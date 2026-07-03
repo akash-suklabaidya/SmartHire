@@ -15,19 +15,20 @@ public class ApplicationRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public void saveApplication(Long jobId, Long userId){
-        String sql="INSERT INTO applications (job_id, user_id) VALUES (?, ?)";
-        jdbcTemplate.update(sql,jobId,userId);
+    public void saveApplication(Long jobId, Long userId, Double matchPercentage, String aiSummary) {
+        String sql = "INSERT INTO applications (job_id, user_id, match_percentage, ai_summary) VALUES (?, ?, ?, ?)";
+        jdbcTemplate.update(sql, jobId, userId, matchPercentage, aiSummary);
     }
 
     public List<Map<String, Object>> getApplicantsForJob(Long jobId) {
-        String sql = "SELECT u.email, a.applied_at, " +
-                "cp.headline, cp.skills, cp.resume_text " +
-                "FROM users u " +
-                "JOIN applications a ON u.id = a.user_id " +
-                "LEFT JOIN candidate_profiles cp ON u.id = cp.user_id " +
-                "WHERE a.job_id = ?";
-        return jdbcTemplate.queryForList(sql,jobId);
+        String sql = "SELECT u.id as user_id, u.email, " +
+                "a.applied_at, a.match_percentage, a.ai_summary " +
+                "FROM applications a " +
+                "JOIN users u ON a.user_id = u.id " +
+                "WHERE a.job_id = ? " +
+                "ORDER BY a.match_percentage DESC NULLS LAST";
+
+        return jdbcTemplate.queryForList(sql, jobId);
     }
 
 

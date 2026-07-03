@@ -11,5 +11,7 @@ public class Application {
     private Long jobId;
     private Long userId;
     private LocalDateTime appliedAt;
+    private Double matchPercentage;
+    private String aiSummary;
 
 }
