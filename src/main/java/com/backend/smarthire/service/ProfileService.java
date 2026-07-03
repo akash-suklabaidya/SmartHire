@@ -4,6 +4,9 @@ import com.backend.smarthire.model.CandidateProfile;
 import com.backend.smarthire.model.User;
 import com.backend.smarthire.repository.ProfileRepository;
 import com.backend.smarthire.repository.UserRepository;
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.output.Response;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -12,15 +15,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.util.Arrays;
 
 @Service
 public class ProfileService {
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final EmbeddingModel embeddingModel;
 
-    public ProfileService(ProfileRepository profileRepository, UserRepository userRepository) {
+    public ProfileService(ProfileRepository profileRepository, UserRepository userRepository, EmbeddingModel embeddingModel) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
+        this.embeddingModel = embeddingModel;
     }
 
     public void upsertProfile(String email, CandidateProfile profileData) {
@@ -51,8 +57,15 @@ public class ProfileService {
         if (user == null) {
             throw new RuntimeException("User not found!");
         }
-        // 2. Delegate the database save to the correct repository
-        profileRepository.upsertResumeText(user.getId(), resumeText);
+        // 2. Generate the Embedding!
+        Response<Embedding> response = embeddingModel.embed(resumeText);
+        float[] vectorArray = response.content().vector();
+
+        // 3. Convert the float[] array into a String formatted as "[0.1, 0.2, ...]" for PostgreSQL
+        String embeddingString = Arrays.toString(vectorArray);
+
+        // 4. Save both the text and the vector to the database
+        profileRepository.upsertResumeText(user.getId(), resumeText, embeddingString);
     }
 
 }
