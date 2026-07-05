@@ -12,13 +12,28 @@ public class UserRepository {
     public UserRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
-    public void save(User user) {
-        String sql = "INSERT INTO users (email, password, role, created_at) VALUES (?, ?, ?, ?)";
+    public User save(User user) {
+        // Add "RETURNING id" to tell PostgreSQL to hand back the new Primary Key instantly
+        String sql = "INSERT INTO users (email, password, role, created_at) VALUES (?, ?, ?, ?) RETURNING id";
 
-        jdbcTemplate.update(sql, user.getEmail(), user.getPassword(), user.getRole(), LocalDateTime.now());
+        // Use queryForObject instead of update so we can capture that returned ID
+        Long generatedId = jdbcTemplate.queryForObject(
+                sql,
+                Long.class,
+                user.getEmail(),
+                user.getPassword(),
+                user.getRole(),
+                LocalDateTime.now()
+        );
 
-        System.out.println("✅ SUCCESS: " + user.getRole() + " saved to Neon Database!");
+        user.setId(generatedId);
+
+        System.out.println("✅ SUCCESS: " + user.getRole() + " saved to Neon Database with ID: " + generatedId);
+
+        return user;
     }
+
+
 
     public User findByEmail(String email){
         String sql="SELECT * FROM users WHERE email = ?";

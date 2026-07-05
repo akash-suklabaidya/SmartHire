@@ -36,13 +36,17 @@ public class ApplicationService {
         String jobDescription=jobRepository.getJobDescription(jobId);
         String resumeText=profileRepository.getResumeTextByUserId(candidate.getId());
 
-        Double matchPercentage = 0.0;
-        String aiSummary = "No resume uploaded.";
-        // 2. If they have a resume, run the AI pipeline!
-        if(resumeText!=null && !resumeText.trim().isEmpty() && jobDescription!=null){
-            matchPercentage=aiMatchmakerService.calculateSingleCandidateMatch(jobDescription,candidate.getId());
-            aiSummary = aiMatchmakerService.generateMatchScore(jobDescription, resumeText);
+        // Block the application completely if they haven't uploaded a resume yet
+        if (resumeText == null || resumeText.trim().isEmpty()) {
+            throw new RuntimeException("You must upload a resume to your profile before applying for jobs!");
         }
+        if (jobDescription == null || jobDescription.trim().isEmpty()) {
+            throw new RuntimeException("Job description not found!");
+        }
+
+        // 2. Run the AI pipeline
+        Double matchPercentage = aiMatchmakerService.calculateSingleCandidateMatch(jobDescription, candidate.getId());
+        String aiSummary = aiMatchmakerService.generateMatchScore(jobDescription, resumeText);
         // 3. Save everything to the database at once
         try {
             applicationRepository.saveApplication(jobId, candidate.getId(),matchPercentage,aiSummary);

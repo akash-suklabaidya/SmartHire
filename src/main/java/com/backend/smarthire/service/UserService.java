@@ -1,6 +1,7 @@
 package com.backend.smarthire.service;
 
 import com.backend.smarthire.model.User;
+import com.backend.smarthire.repository.ProfileRepository;
 import com.backend.smarthire.repository.UserRepository;
 import com.backend.smarthire.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,18 +12,27 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final ProfileRepository profileRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, ProfileRepository profileRepository) {
         this.jwtUtil=jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder=passwordEncoder;
+        this.profileRepository = profileRepository;
     }
 
     public User registerUser(User user) {
         String plainTextPassword=user.getPassword();
         String hashedPassword=passwordEncoder.encode(plainTextPassword);
         user.setPassword(hashedPassword);
-        userRepository.save(user);
+
+        User savedUser=userRepository.save(user);
+
+//        Automatically create a blank profile if the new user is a Candidate!
+        if ("CANDIDATE".equalsIgnoreCase(savedUser.getRole())) {
+            profileRepository.createDeafultProfile(savedUser.getId());
+        }
+
         return user;
     }
 

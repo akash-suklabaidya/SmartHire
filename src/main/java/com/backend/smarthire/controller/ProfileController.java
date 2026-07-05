@@ -3,12 +3,14 @@ package com.backend.smarthire.controller;
 import com.backend.smarthire.dto.ApiResponse;
 import com.backend.smarthire.model.CandidateProfile;
 import com.backend.smarthire.service.ProfileService;
+import com.backend.smarthire.service.ResumeEventProducer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.Map;
 
 @SuppressWarnings("NullableProblems")
@@ -16,9 +18,11 @@ import java.util.Map;
 @RequestMapping("/api/profiles")
 public class ProfileController {
     private final ProfileService profileService;
+    private final ResumeEventProducer resumeEventProducer;
 
-    public ProfileController(ProfileService profileService) {
+    public ProfileController(ProfileService profileService, ResumeEventProducer resumeEventProducer) {
         this.profileService = profileService;
+        this.resumeEventProducer = resumeEventProducer;
     }
 
     @PostMapping
@@ -43,17 +47,26 @@ public class ProfileController {
             return ResponseEntity.badRequest().body(Map.of("error", "Please select a file to upload."));
         }
         try{
-            // Extract the text from the PDF
-            String extractedText = profileService.extractTextFromPdf(file);
-            // 2. Get the logged-in user's email
+            // 1. Get the logged-in user's email
             String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-            // 3. Save the text to the database
-            profileService.saveResumeTextForUser(currentUserEmail, extractedText);
+
+            // 2. Create a temporary file on your local machine to safely store the PDF
+            String tempDir=System.getProperty("java.io.tmpdir");
+            File tempFile = new File(tempDir, System.currentTimeMillis() + "_" + file.getOriginalFilename());
+
+            // 3. Physically save the uploaded file to that location
+            file.transferTo(tempFile);
+
+            // 4. Send the file path to Kafka! (Takes milliseconds)
+            resumeEventProducer.sendResumeProcessingEvent(currentUserEmail, tempFile.getAbsolutePath());
+
+            // 5. Instantly return success to the frontend
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "PDF parsed successfully!",
-                    "preview", extractedText.substring(0, Math.min(extractedText.length(), 100)) + "..."
+                    "message", "Resume received! The AI is reading it in the background."
             ));
+
+
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

@@ -89,4 +89,10 @@ public class ProfileRepository {
 
     }
 
+    public void createDeafultProfile(Long userId){
+        String sql = "INSERT INTO candidate_profiles (user_id) VALUES (?) " +
+                "ON CONFLICT (user_id) DO NOTHING";
+        jdbcTemplate.update(sql,userId);
+    }
+
 }

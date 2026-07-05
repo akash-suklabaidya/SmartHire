@@ -14,6 +14,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.Arrays;
 
@@ -44,13 +45,26 @@ public class ProfileService {
             throw new IllegalArgumentException("Only PDF files are allowed.");
         }
         // 2. Extract text using PDFBox 3.0+ syntax        try(InputStream inputStream=file.getInputStream()){
-
         byte[] fileBytes=file.getBytes();
         try(PDDocument document= Loader.loadPDF(new RandomAccessReadBuffer(fileBytes))){
             PDFTextStripper pdfTextStripper=new PDFTextStripper();
             return pdfTextStripper.getText(document);
         }
     }
+
+    // Parsing the local pdf files from system
+    public String extractTextFromPdf(File file) throws Exception {
+        // 1. Validate file extension
+        if(!file.getName().toLowerCase().endsWith(".pdf")){
+            throw new IllegalArgumentException("Only PDF files are allowed.");
+        }
+        // 2. Extract text using PDFBox 3.0+ syntax for java.io.File
+        try(PDDocument document=Loader.loadPDF(file)){
+            PDFTextStripper pdfTextStripper=new PDFTextStripper();
+            return pdfTextStripper.getText(document);
+        }
+    }
+
     public void saveResumeTextForUser(String email, String resumeText) {
         // 1. Find the user
         User user = userRepository.findByEmail(email);
