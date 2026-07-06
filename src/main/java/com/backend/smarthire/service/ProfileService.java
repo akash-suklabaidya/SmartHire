@@ -82,4 +82,8 @@ public class ProfileService {
         profileRepository.upsertResumeText(user.getId(), resumeText, embeddingString);
     }
 
+    public String getResumeText(Long userId){
+        return profileRepository.getResumeTextByUserId(userId);
+    }
+
 }

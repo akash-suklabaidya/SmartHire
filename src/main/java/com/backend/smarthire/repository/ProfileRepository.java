@@ -2,6 +2,7 @@ package com.backend.smarthire.repository;
 
 import com.backend.smarthire.model.CandidateMatch;
 import com.backend.smarthire.model.CandidateProfile;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -86,7 +87,6 @@ public class ProfileRepository {
         }catch (Exception e) {
             return null;
         }
-
     }
 
     public void createDeafultProfile(Long userId){

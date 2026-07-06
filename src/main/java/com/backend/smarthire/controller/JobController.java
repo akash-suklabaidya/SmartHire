@@ -5,6 +5,7 @@ import com.backend.smarthire.model.Job;
 import com.backend.smarthire.service.AiMatchmakerService;
 import com.backend.smarthire.service.ApplicationService;
 import com.backend.smarthire.service.JobService;
+import com.backend.smarthire.service.ProfileService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,12 +22,14 @@ public class JobController {
     private final JobService jobService;
     private final ApplicationService applicationService;
     private final AiMatchmakerService aiMatchmakerService;
+    private final ProfileService profileService;
 
     // Spring gives us the repository we just made
-    public JobController(JobService jobService, ApplicationService applicationService, AiMatchmakerService aiMatchmakerService) {
+    public JobController(JobService jobService, ApplicationService applicationService, AiMatchmakerService aiMatchmakerService, ProfileService profileService) {
         this.jobService = jobService;
         this.applicationService=applicationService;
         this.aiMatchmakerService = aiMatchmakerService;
+        this.profileService = profileService;
     }
 
     // When someone sends a POST request to /api/jobs, run this method
@@ -97,6 +100,62 @@ public class JobController {
                     "success", false,
                     "message", "Error matching candidates: " + e.getMessage()
             ));
+        }
+
+    }
+
+    @GetMapping("/{jobId}/matches")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<?> getJobMatches(@PathVariable Long jobId) {
+        try{
+            // 1. Fetch the pre-computed job embedding and description from the database
+            String jobEmbedding=jobService.getJobEmbedding(jobId);
+            String jobDescription = jobService.getJobDescription(jobId);
+
+            if (jobEmbedding == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Job not found or has no embedding."));
+            }
+
+            // 2. RETRIEVER: Fetch top 5 mathematical candidate matches instantly using pgvector
+            List<CandidateMatch> matches = aiMatchmakerService.matchCandidatesToJobEmbedding(jobEmbedding, 5);
+
+            // 3. EVALUATOR: Have OpenAI write a concise summary for each match
+            for (CandidateMatch match : matches) {
+                String aiExplanation = aiMatchmakerService.generateMatchScore(jobDescription, match.getFullResumeText());
+                match.setAiSummary(aiExplanation);
+                match.setFullResumeText(null);
+            }
+            return ResponseEntity.ok(Map.of("success", true, "matches", matches));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Error matching candidates: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{jobId}/candidates/{candidateId}/questions")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<?> getCandidateInterviewQuestions(@PathVariable Long jobId,
+                                                            @PathVariable Long candidateId){
+        try {
+            // 1. Fetch Job Description
+            String jobDescription = jobService.getJobDescription(jobId);
+            // 2. Fetch Candidate Resume Text and Name directly via ProfileRepository/UserRepository
+            // (Assuming you have a method to get full resume text by userId)
+            String resumeText= profileService.getResumeText(candidateId);
+            if (jobDescription.isEmpty() || resumeText == null || resumeText.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid Job ID or Candidate Profile."));
+            }
+
+            // 3. Generate questions
+            String questions = aiMatchmakerService.generateInterviewQuestions(jobDescription, resumeText, "The Candidate");
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "candidateId", candidateId,
+                    "jobId", jobId,
+                    "questions", questions
+            ));
+        }
+        catch (Exception e){
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", e.getMessage()));
         }
 
     }

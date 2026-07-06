@@ -54,4 +54,13 @@ public class JobRepository {
         }
     }
 
+    public String getJobEmbedding(Long jobId) {
+        String sql = "SELECT job_embedding::text FROM jobs WHERE id = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, String.class, jobId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
 }

@@ -31,4 +31,12 @@ public class JobService {
         return jobRepository.findAll();
     }
 
+    public String getJobEmbedding(Long jobId) {
+        return jobRepository.getJobEmbedding(jobId);
+    }
+
+    public String getJobDescription(Long jobId) {
+        return jobRepository.getJobDescription(jobId);
+    }
+
 }

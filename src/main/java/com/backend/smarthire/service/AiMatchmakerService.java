@@ -96,5 +96,43 @@ public class AiMatchmakerService {
 
     }
 
+    public List<CandidateMatch> matchCandidatesToJobEmbedding(String jobEmbeddingString, int limit) {
+        // Pass the pre-computed database vector string straight to our profile repository
+        return profileRepository.findSimilarCandidates(jobEmbeddingString, limit);
+    }
+
+    public String generateInterviewQuestions(String jobDescription, String resumeText, String candidateName) {
+        String systemPrompt = "You are an elite technical interviewer. Generate 3 highly customized interview questions for " + candidateName + ".\n" +
+                "1. The first question should test a core skill they possess that matches the job.\n" +
+                "2. The second question must directly target a gap or missing skill identified between their resume and the job description to test their adaptability.\n" +
+                "3. The third question should be a behavioral scenario tailored to their project experience.\n" +
+                "Keep the questions concise, professional, and direct. Do not include introductory text, just output the numbered questions.";
+
+        String userPrompt = "Job Description:\n" + jobDescription + "\n\nCandidate Resume:\n" + resumeText;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", userPrompt)
+        ));
+
+        requestBody.put("temperature", 0.5);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(OPENAI_URL, request, Map.class);
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
+            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+            return (String) message.get("content");
+        } catch (Exception e) {
+            return "Error generating interview questions: " + e.getMessage();
+        }
+
+    }
 
 }
