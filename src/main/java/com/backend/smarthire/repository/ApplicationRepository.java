@@ -31,6 +31,19 @@ public class ApplicationRepository {
         return jdbcTemplate.queryForList(sql, jobId);
     }
 
+    public int updateStatus(Long applicationId, String newStatus) {
+        String sql = "UPDATE applications SET status = ? WHERE id = ?";
+        return jdbcTemplate.update(sql,newStatus,applicationId);
+    }
 
+    public Long getCandidateIdByApplicationId(Long applicationId) {
+        String sql = "SELECT user_id FROM applications WHERE id = ?";
+        try{
+            return jdbcTemplate.queryForObject(sql, Long.class, applicationId);
+        }
+        catch (Exception e) {
+            return null; // Return null if the application doesn't exist
+        }
+    }
 
 }

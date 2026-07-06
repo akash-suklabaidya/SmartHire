@@ -37,6 +37,8 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // Anyone can register or log in
                         .requestMatchers("/api/auth/**").permitAll()
+                        // to allow the HTML file and WebSocket connections
+                        .requestMatchers("/test-websocket.html", "/ws/**").permitAll()
                         // ONLY a Recruiter can post a new job!
                         .requestMatchers(HttpMethod.POST,"/api/jobs").hasRole("RECRUITER")
                         // Any other request (like GET /api/jobs) just requires a valid token

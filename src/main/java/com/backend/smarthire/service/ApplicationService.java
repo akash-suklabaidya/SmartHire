@@ -5,6 +5,7 @@ import com.backend.smarthire.repository.ApplicationRepository;
 import com.backend.smarthire.repository.JobRepository;
 import com.backend.smarthire.repository.ProfileRepository;
 import com.backend.smarthire.repository.UserRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,13 +19,15 @@ public class ApplicationService {
     private final AiMatchmakerService aiMatchmakerService;
     private final JobRepository jobRepository;
     private final ProfileRepository profileRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public ApplicationService(ApplicationRepository applicationRepository, UserRepository userRepository, AiMatchmakerService aiMatchmakerService, JobRepository jobRepository, ProfileRepository profileRepository) {
+    public ApplicationService(ApplicationRepository applicationRepository, UserRepository userRepository, AiMatchmakerService aiMatchmakerService, JobRepository jobRepository, ProfileRepository profileRepository, SimpMessagingTemplate messagingTemplate) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.aiMatchmakerService = aiMatchmakerService;
         this.jobRepository = jobRepository;
         this.profileRepository = profileRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     public void applyForJob(Long jobId, String userEmail) {
@@ -61,6 +64,30 @@ public class ApplicationService {
         return applicationRepository.getApplicantsForJob(jobId);
     }
 
+    public void updateApplicationStatus(Long applicationId, String newStatus) {
+        // 1. Update status in the database via Repository
+        int updatedRows = applicationRepository.updateStatus(applicationId, newStatus);
 
+        if(updatedRows==0){
+            throw new RuntimeException("Application record not found.");
+        }
+        // 2. Fetch the candidate's user ID via Repository
+        Long candidateId=applicationRepository.getCandidateIdByApplicationId(applicationId);
+
+        if(candidateId==null){
+            throw new RuntimeException("Candidate associated with this application not found.");
+        }
+
+        // 3. PUSH IT LIVE! Send a JSON payload down the open WebSocket tunnel
+        Map<String, Object> updatePayload = Map.of(
+                "applicationId", applicationId,
+                "status", newStatus,
+                "message", "Your application status has been updated to: " + newStatus
+        );
+
+        messagingTemplate.convertAndSend("/topic/updates/" + candidateId, (Object) updatePayload);
+        System.out.println("📢 WEBSOCKET SENT: Pushed status update to /topic/updates/" + candidateId);
+
+    }
 
 }

@@ -189,4 +189,27 @@ public class JobController {
             return ResponseEntity.internalServerError().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
+
+    @PatchMapping("/applications/{applicationId}/status")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<?> updateApplicationStatus(
+            @PathVariable Long applicationId,
+            @RequestBody Map<String, String> payload) {
+        try {
+            String newStatus = payload.get("status");
+            if (newStatus == null || newStatus.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Status value is required"));
+            }
+
+            applicationService.updateApplicationStatus(applicationId, newStatus.toUpperCase());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Application status updated and live notification dispatched!"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
 }
