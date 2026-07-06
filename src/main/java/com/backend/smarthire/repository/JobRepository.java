@@ -16,10 +16,20 @@ public class JobRepository {
         this.jdbcTemplate=jdbcTemplate;
     }
 
-    public void save(Job job){
-        String sql="INSERT INTO jobs (title, description, created_at) VALUES (?, ?, ?)";
-        jdbcTemplate.update(sql,job.getTitle(),job.getDescription(), LocalDateTime.now());
-        System.out.println("✅ SUCCESS: Job saved to Neon Database!");
+    public Job save(Job job, String embeddingString){
+        String sql = "INSERT INTO jobs (title, description, job_embedding, created_at) VALUES (?, ?, ?::vector, ?) RETURNING id";
+        Long generatedId=jdbcTemplate.queryForObject(
+                sql,
+                Long.class,
+                job.getTitle(),
+                job.getDescription(),
+                embeddingString,
+                LocalDateTime.now()
+        );
+        job.setId(generatedId);
+        job.setCreatedAt(LocalDateTime.now());
+        System.out.println("✅ SUCCESS: Job saved to Neon Database with ID: " + generatedId);
+        return job;
     }
 
     public List<Job> findAll(){

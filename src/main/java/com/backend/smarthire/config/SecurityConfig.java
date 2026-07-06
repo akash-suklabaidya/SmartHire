@@ -33,6 +33,8 @@ public class SecurityConfig {
         http.csrf(csrf->csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth->auth
+                        // Allow the default error endpoint so exceptions don't get masked as 403s!
+                        .requestMatchers("/error").permitAll()
                         // Anyone can register or log in
                         .requestMatchers("/api/auth/**").permitAll()
                         // ONLY a Recruiter can post a new job!

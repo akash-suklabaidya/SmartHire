@@ -85,7 +85,6 @@ public class AiMatchmakerService {
         catch (Exception e){
             return "Error calculating match score: " + e.getMessage();
         }
-
     }
 
     public Double calculateSingleCandidateMatch(String jobDescription, Long userId) {
