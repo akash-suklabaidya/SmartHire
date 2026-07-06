@@ -135,4 +135,40 @@ public class AiMatchmakerService {
 
     }
 
+    public String generateDraftEmail(String jobDescription, String resumeText, String candidateName, String emailType) {
+        String behavior=emailType.equalsIgnoreCase("REJECTION")
+                ? "a polite, professional, and empathetic rejection email. Gently mention a specific skill or requirement from the job description that was missing in their resume to provide closure, but encourage them to apply in the future."
+                : "an enthusiastic and welcoming email inviting them to a first-round interview. Highlight a specific project or skill from their resume that perfectly matches the job description.";
+
+        String systemPrompt = "You are an expert technical recruiter writing an email to a candidate named " + candidateName + ". " +
+                "Write " + behavior + "\n" +
+                "Keep it concise (under 150 words). Do not use generic placeholders like [Company Name] or [Your Name]—sign off simply as 'The SmartHire Recruiting Team'.";
+
+        String userPrompt = "Job Description:\n" + jobDescription + "\n\nCandidate Resume:\n" + resumeText;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", userPrompt)
+        ));
+
+        requestBody.put("temperature", 0.6); // Slightly higher temperature for natural email tone
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(OPENAI_URL, request, Map.class);
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
+            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+            return (String) message.get("content");
+        } catch (Exception e) {
+            return "Error generating email: " + e.getMessage();
+        }
+
+    }
+
 }

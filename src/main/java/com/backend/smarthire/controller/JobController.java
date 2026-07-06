@@ -160,4 +160,33 @@ public class JobController {
 
     }
 
+    @GetMapping("/{jobId}/candidates/{candidateId}/email")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<?> getDraftEmail(
+            @PathVariable Long jobId,
+            @PathVariable Long candidateId,
+            @RequestParam(defaultValue = "INTERVIEW") String type) {
+
+        try{
+            // 1. Fetch data
+            String jobDescription=jobService.getJobDescription(jobId);
+            String resumeText= profileService.getResumeText(candidateId);
+
+            if (jobDescription.isEmpty() || resumeText == null || resumeText.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid Job ID or Candidate Profile."));
+            }
+            // 2. Generate the specific email type
+            String emailBody = aiMatchmakerService.generateDraftEmail(jobDescription, resumeText, "Candidate", type);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "candidateId", candidateId,
+                    "jobId", jobId,
+                    "type", type.toUpperCase(),
+                    "emailBody", emailBody
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 }
