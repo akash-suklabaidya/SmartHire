@@ -3,6 +3,7 @@ package com.backend.smarthire.security;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -10,8 +11,11 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private final String SECRET = "SmartHireSuperSecretKeyForJwtGeneration12345!";
-    private final Key key=Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final Key key;
+
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
     // Set the token to expire in 24 hours (86,400,000 milliseconds)
     private final long expirationTime = 86400000;
