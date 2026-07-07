@@ -4,6 +4,7 @@ import com.backend.smarthire.dto.ApiResponse;
 import com.backend.smarthire.model.CandidateProfile;
 import com.backend.smarthire.service.ProfileService;
 import com.backend.smarthire.service.ResumeEventProducer;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,7 +41,7 @@ public class ProfileController {
 
     }
 
-    @PostMapping("/upload-resume")
+    @PostMapping(value = "/upload-resume", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('CANDIDATE')")
     public ResponseEntity<?> uploadResume(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
