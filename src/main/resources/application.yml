@@ -12,24 +12,6 @@ spring:
     init:
       mode: always
 
-  kafka:
-    # Pulls the Aiven 'Service URI' from your deployment environment
-    bootstrap-servers: ${KAFKA_URL}
-    ssl:
-      trust-store-location: classpath:client.truststore.jks
-      trust-store-password: secret
-    properties:
-      security.protocol: SASL_SSL
-      sasl.mechanism: SCRAM-SHA-256
-      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USERNAME}" password="${KAFKA_PASSWORD}";
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    consumer:
-      group-id: smarthire-ai-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   data:
     redis:
       host: ${REDIS_HOST}
@@ -41,6 +23,15 @@ spring:
   cache:
     redis:
       time-to-live: 600000ms     
+
+custom:
+  kafka:
+    # Pulls the Aiven 'Service URI' from your deployment environment
+    bootstrap-servers: ${KAFKA_URL}
+    ssl:
+      trust-store-password: secret
+    properties:
+      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USERNAME}" password="${KAFKA_PASSWORD}";
 
 openai:
   api:
