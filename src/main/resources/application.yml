@@ -2,10 +2,9 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
   datasource:
-    # Notice we changed 'postgresql://' to 'jdbc:postgresql://' so Java understands it
-    url: jdbc:postgresql://ep-dry-resonance-ataz0j8h.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require
-    username: neondb_owner
-    password: change-me
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   # This tells Spring to print SQL queries to the console (great for learning!)
@@ -45,8 +44,11 @@ spring:
 
 openai:
   api:
-    key: change-me
+    key: ${OPENAI_API_KEY}
   model: gpt-5.4-mini
 
 jwt:
   secret: ${JWT_SECRET}
+
+server:
+  port: ${PORT:8080}

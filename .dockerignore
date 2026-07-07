@@ -1,0 +1,29 @@
+# Build directories and artifacts
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE and Editor files
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.sts4-cache
+
+# Local configuration and secrets
+application-local.yml
+.env
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Markdown and Docs (optional, saves space)
+HELP.md
+README.md
