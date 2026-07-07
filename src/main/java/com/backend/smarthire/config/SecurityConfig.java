@@ -37,6 +37,8 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // Anyone can register or log in
                         .requestMatchers("/api/auth/**").permitAll()
+                        // 👉 ADD THESE LINES to allow Swagger UI and OpenAPI docs
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // to allow the HTML file and WebSocket connections
                         .requestMatchers("/test-websocket.html", "/ws/**").permitAll()
                         // ONLY a Recruiter can post a new job!
