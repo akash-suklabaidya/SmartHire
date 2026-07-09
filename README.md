@@ -88,8 +88,9 @@ Client Request
 ### 📧 AI-Generated Communication
 - Recruiters can auto-generate **personalized interview invitation emails** or **empathetic rejection emails** for any candidate, powered by GPT. Each email is contextually tailored based on the specific job description and the candidate's resume.
 
-### ❓ AI-Generated Interview Questions
+### ❓ AI-Generated Interview Questions & Resume Q&A
 - For any shortlisted candidate, the system generates **3 highly customized interview questions** that target their specific strengths, skill gaps, and project experience relative to the job posting.
+- Recruiters can also interact directly with a candidate's resume via a **Q&A endpoint** (`/api/profiles/{id}/ask`), acting as a chatbot that answers questions based strictly on the parsed PDF text.
 
 ### 🛡️ Enterprise Security
 - **JWT-based stateless authentication** with role-based access control (`CANDIDATE`, `RECRUITER`, `ADMIN`).
@@ -110,6 +111,7 @@ Client Request
 | **Framework** | Spring Boot 4.1 | Core application framework |
 | **Language** | Java 17+ | Primary language |
 | **Database** | PostgreSQL (Neon Cloud) + pgvector | Relational data + vector similarity search |
+| **Connection Pool** | HikariCP | Configured with `minimum-idle: 0` to scale DB compute to zero and save costs |
 | **AI / LLM** | OpenAI GPT-5.4-mini | Match scoring, interview questions, email drafting |
 | **Embeddings** | OpenAI text-embedding-ada-002 via LangChain4j | Resume & job vectorization |
 | **Message Broker** | Apache Kafka (Aiven Cloud) | Async resume processing pipeline |
@@ -192,6 +194,7 @@ graph LR
 | `GET` | `/api/jobs/{jobId}/candidates/{id}/questions` | RECRUITER | Generate personalized interview questions |
 | `GET` | `/api/jobs/{jobId}/candidates/{id}/email?type=INTERVIEW` | RECRUITER | Generate interview invitation email |
 | `GET` | `/api/jobs/{jobId}/candidates/{id}/email?type=REJECTION` | RECRUITER | Generate empathetic rejection email |
+| `POST` | `/api/profiles/{candidateId}/ask` | RECRUITER | Ask free-text questions about a candidate's resume (RAG Chatbot) |
 
 ### Profiles
 | Method | Endpoint | Access | Description |
