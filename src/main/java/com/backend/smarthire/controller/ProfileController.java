@@ -2,6 +2,7 @@ package com.backend.smarthire.controller;
 
 import com.backend.smarthire.dto.ApiResponse;
 import com.backend.smarthire.model.CandidateProfile;
+import com.backend.smarthire.service.AiMatchmakerService;
 import com.backend.smarthire.service.ProfileService;
 import com.backend.smarthire.service.ResumeEventProducer;
 import org.springframework.http.MediaType;
@@ -20,10 +21,12 @@ import java.util.Map;
 public class ProfileController {
     private final ProfileService profileService;
     private final ResumeEventProducer resumeEventProducer;
+    private final AiMatchmakerService aiMatchmakerService;
 
-    public ProfileController(ProfileService profileService, ResumeEventProducer resumeEventProducer) {
+    public ProfileController(ProfileService profileService, ResumeEventProducer resumeEventProducer, AiMatchmakerService aiMatchmakerService) {
         this.profileService = profileService;
         this.resumeEventProducer = resumeEventProducer;
+        this.aiMatchmakerService = aiMatchmakerService;
     }
 
     @PostMapping
@@ -74,5 +77,27 @@ public class ProfileController {
         catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Failed to parse PDF: " + e.getMessage()));
         }
+    }
+
+    @PostMapping("/{candidateId}/ask")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<ApiResponse<String>> askQuestionAboutResume(
+            @PathVariable Long candidateId,
+            @RequestBody Map<String, String> payload) {
+        
+        String question = payload.get("question");
+        if (question == null || question.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Question is required", null));
+        }
+
+        // 1. Fetch the resume text from the DB
+        String resumeText = profileService.getResumeText(candidateId);
+        if (resumeText == null || resumeText.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Candidate does not have a parsed resume on file.", null));
+        }
+
+        // 2. Ask the AI
+        String answer = aiMatchmakerService.askQuestionAboutResume(resumeText, question);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", answer));
     }
 }

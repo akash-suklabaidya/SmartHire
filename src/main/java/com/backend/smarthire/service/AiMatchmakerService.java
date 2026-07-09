@@ -170,5 +170,35 @@ public class AiMatchmakerService {
         }
 
     }
+    public String askQuestionAboutResume(String resumeText, String question) {
+        String systemPrompt = "You are a helpful HR assistant. Answer the user's question based ONLY on the provided resume text. " +
+                "If the answer is not present in the resume, you must explicitly say: 'I cannot find this information in the resume.' " +
+                "Do NOT hallucinate or guess.";
+                
+        String userPrompt = "Resume:\n" + resumeText + "\n\nQuestion:\n" + question;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", userPrompt)
+        ));
+        requestBody.put("temperature", 0.1); // Very low temperature to prevent hallucination
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(OPENAI_URL, request, Map.class);
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
+            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+            return (String) message.get("content");
+        } catch (Exception e) {
+            return "Error answering question: " + e.getMessage();
+        }
+    }
 
 }
