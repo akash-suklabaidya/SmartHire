@@ -54,17 +54,17 @@ public class ProfileController {
             // 1. Get the logged-in user's email
             String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-            // 2. Create a temporary file on your local machine to safely store the PDF
-            String tempDir=System.getProperty("java.io.tmpdir");
-            File tempFile = new File(tempDir, System.currentTimeMillis() + "_" + file.getOriginalFilename());
+            // 2. Extract text synchronously (takes milliseconds)
+            String extractedText = profileService.extractTextFromPdf(file);
+            
+            if (extractedText == null || extractedText.trim().isEmpty()) {
+                 return ResponseEntity.badRequest().body(Map.of("error", "We couldn't extract any text from this PDF. Please ensure it is a text-based PDF and not an image."));
+            }
 
-            // 3. Physically save the uploaded file to that location
-            file.transferTo(tempFile);
+            // 3. Save text to DB and trigger Kafka for embedding
+            profileService.saveResumeTextAndTriggerEmbedding(currentUserEmail, extractedText);
 
-            // 4. Send the file path to Kafka! (Takes milliseconds)
-            resumeEventProducer.sendResumeProcessingEvent(currentUserEmail, tempFile.getAbsolutePath());
-
-            // 5. Instantly return success to the frontend
+            // 4. Instantly return success to the frontend
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Resume received! The AI is reading it in the background."

@@ -12,17 +12,14 @@ public class ResumeEventProducer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendResumeProcessingEvent(String userEmail, String filePath) {
+    public void sendResumeProcessingEvent(String userEmail) {
         // The "Topic" is the specific queue name we are sending this to
         String topic = "resume-processing-topic";
 
-        // The message we are sending (a simple string combining the user ID and where the file is saved)
-        String message = userEmail + "||" + filePath;
-
         // Fire it into Kafka!
-        kafkaTemplate.send(topic,message);
+        kafkaTemplate.send(topic, userEmail);
 
-        System.out.println("✅ KAFKA EVENT FIRED: Sent file " + filePath + " to queue for User " + userEmail);
+        System.out.println("✅ KAFKA EVENT FIRED: Sent embedding generation task to queue for User " + userEmail);
 
     }
 

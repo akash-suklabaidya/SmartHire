@@ -23,11 +23,13 @@ public class ProfileService {
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final EmbeddingModel embeddingModel;
+    private final ResumeEventProducer resumeEventProducer;
 
-    public ProfileService(ProfileRepository profileRepository, UserRepository userRepository, EmbeddingModel embeddingModel) {
+    public ProfileService(ProfileRepository profileRepository, UserRepository userRepository, EmbeddingModel embeddingModel, ResumeEventProducer resumeEventProducer) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
         this.embeddingModel = embeddingModel;
+        this.resumeEventProducer = resumeEventProducer;
     }
 
     public void upsertProfile(String email, CandidateProfile profileData) {
@@ -65,21 +67,43 @@ public class ProfileService {
         }
     }
 
-    public void saveResumeTextForUser(String email, String resumeText) {
+    public void saveResumeTextAndTriggerEmbedding(String email, String resumeText) {
         // 1. Find the user
         User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new RuntimeException("User not found!");
         }
-        // 2. Generate the Embedding!
-        Response<Embedding> response = embeddingModel.embed(resumeText);
-        float[] vectorArray = response.content().vector();
+        
+        // 2. Save ONLY the text to the database immediately
+        profileRepository.upsertResumeTextOnly(user.getId(), resumeText);
 
-        // 3. Convert the float[] array into a String formatted as "[0.1, 0.2, ...]" for PostgreSQL
-        String embeddingString = Arrays.toString(vectorArray);
+        // 3. Trigger Kafka event to process embeddings in the background
+        resumeEventProducer.sendResumeProcessingEvent(email);
+    }
 
-        // 4. Save both the text and the vector to the database
-        profileRepository.upsertResumeText(user.getId(), resumeText, embeddingString);
+    public void generateAndSaveEmbedding(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) return;
+
+        // Fetch the securely saved resume text
+        String resumeText = profileRepository.getResumeTextByUserId(user.getId());
+        if (resumeText == null || resumeText.trim().isEmpty()) {
+            System.err.println("No resume text found for user: " + email);
+            return;
+        }
+
+        try {
+            // Generate the Embedding!
+            Response<Embedding> response = embeddingModel.embed(resumeText);
+            float[] vectorArray = response.content().vector();
+
+            // Convert and save
+            String embeddingString = Arrays.toString(vectorArray);
+            profileRepository.updateResumeEmbedding(user.getId(), embeddingString);
+            System.out.println("✅ BACKGROUND TASK COMPLETE: Saved resume embedding to DB for " + email);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to generate embedding for " + email + ": " + e.getMessage());
+        }
     }
 
     public String getResumeText(Long userId){

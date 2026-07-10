@@ -19,23 +19,11 @@ public class ResumeEventConsumer {
     public void consumeResumeEvent(String message) {
         try {
             System.out.println("📥 KAFKA CONSUMER: Picked up message -> " + message);
-            // 1. Unpack the event message (Email || FilePath)
-            String[] parts = message.split("\\|\\|");
-            String userEmail = parts[0];
-            String filePath = parts[1];
+            // The message is just the userEmail now
+            String userEmail = message;
 
-            File pdfFile = new File(filePath);
-
-            // 2. Execute your text extraction and DB save in the background
-            String extractedText=profileService.extractTextFromPdf(pdfFile);
-            profileService.saveResumeTextForUser(userEmail,extractedText);
-
-            System.out.println("✅ BACKGROUND TASK COMPLETE: Saved resume text to DB for " + userEmail);
-
-            // 3. Delete the temporary file so it doesn't clutter your hard drive
-            if(pdfFile.exists()){
-                pdfFile.delete();
-            }
+            // 2. Execute the embedding generation in the background
+            profileService.generateAndSaveEmbedding(userEmail);
 
         } catch (Exception e) {
             System.err.println("❌ KAFKA CONSUMER ERROR: Failed to process resume in background.");

@@ -45,6 +45,24 @@ public class ProfileRepository {
         jdbcTemplate.update(sql, userId, resumeText, embeddingString);
     }
 
+    public void upsertResumeTextOnly(Long userId, String resumeText){
+        String sql = "INSERT INTO candidate_profiles (user_id, resume_text) " +
+                "VALUES (?, ?) " +
+                "ON CONFLICT (user_id) " +
+                "DO UPDATE SET " +
+                "resume_text = EXCLUDED.resume_text, " +
+                "updated_at = CURRENT_TIMESTAMP";
+        jdbcTemplate.update(sql, userId, resumeText);
+    }
+
+    public void updateResumeEmbedding(Long userId, String embeddingString){
+        String sql = "UPDATE candidate_profiles SET " +
+                "resume_embedding = ?::vector, " +
+                "updated_at = CURRENT_TIMESTAMP " +
+                "WHERE user_id = ?";
+        jdbcTemplate.update(sql, embeddingString, userId);
+    }
+
     public List<CandidateMatch> findSimilarCandidates(String jobVectorString, int limit) {
         // The magic SQL query using pgvector's Cosine Distance operator <=>
         String sql = "SELECT user_id, headline, resume_text, substring(resume_text from 1 for 150) as text_preview, " +
