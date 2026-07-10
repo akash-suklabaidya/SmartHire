@@ -64,14 +64,11 @@ public class ProfileRepository {
     }
 
     public List<CandidateMatch> findSimilarCandidates(String jobVectorString, int limit) {
-        // The magic SQL query using pgvector's Cosine Distance operator <=>
+        // We calculate the RAW cosine similarity (1 - cosine distance)
         String sql = "SELECT user_id, headline, resume_text, substring(resume_text from 1 for 150) as text_preview, " +
-                // (1 - cosine_distance) * 100 = Match Percentage!
-                "ROUND(((1 - (resume_embedding <=> ?::vector)) * 100)::numeric, 2) as match_percentage " +
+                "(1 - (resume_embedding <=> ?::vector)) as raw_similarity " +
                 "FROM candidate_profiles " +
-                // Ignore profiles that haven't uploaded a resume yet
                 "WHERE resume_embedding IS NOT NULL " +
-                // Order by the most mathematically similar vectors first
                 "ORDER BY resume_embedding <=> ?::vector " +
                 "LIMIT ?";
 
@@ -80,22 +77,55 @@ public class ProfileRepository {
             match.setUserId(rs.getLong("user_id"));
             match.setHeadline(rs.getString("headline"));
             match.setResumeTextPreview(rs.getString("text_preview") + "...");
-            match.setMatchPercentage(rs.getDouble("match_percentage"));
             match.setFullResumeText(rs.getString("resume_text"));
+            
+            // Apply human-readable normalization
+            double rawSim = rs.getDouble("raw_similarity");
+            match.setMatchPercentage(normalizeMatchScore(rawSim));
+            
             return match;
         }, jobVectorString, jobVectorString, limit);
-        // Notice we pass jobVectorString twice! Once for the SELECT percentage calculation, and once for the ORDER BY sorting.
     }
 
     public Double getSingleMatchPercentage(String jobVectorString, Long userId) {
-        String sql = "SELECT ROUND(((1 - (resume_embedding <=> ?::vector)) * 100)::numeric, 2) " +
+        String sql = "SELECT (1 - (resume_embedding <=> ?::vector)) as raw_similarity " +
                 "FROM candidate_profiles WHERE user_id = ?";
         try{
-            return jdbcTemplate.queryForObject(sql, Double.class, jobVectorString,userId);
+            Double rawSim = jdbcTemplate.queryForObject(sql, Double.class, jobVectorString, userId);
+            return rawSim != null ? normalizeMatchScore(rawSim) : 0.0;
         }
         catch (Exception e) {
             return 0.0;
         }
+    }
+
+    /**
+     * OpenAI embeddings typically range from 0.72 (terrible match) to 0.88 (perfect match).
+     * This method mathematically scales that narrow range into a 0-100% human-intuitive scale.
+     */
+    private double normalizeMatchScore(double rawSimilarity) {
+        double score;
+        if (rawSimilarity <= 0.73) {
+            // Map anything below 0.73 to a very low score (0-20%)
+            score = Math.max(0.0, (rawSimilarity - 0.65) / (0.73 - 0.65) * 20.0);
+        } else if (rawSimilarity <= 0.77) {
+            // Map 0.73 - 0.77 to 20% - 60% (Poor to Below Average)
+            score = 20.0 + (rawSimilarity - 0.73) / 0.04 * 40.0;
+        } else if (rawSimilarity <= 0.81) {
+            // Map 0.77 - 0.81 to 60% - 80% (Average to Good)
+            score = 60.0 + (rawSimilarity - 0.77) / 0.04 * 20.0;
+        } else if (rawSimilarity <= 0.85) {
+            // Map 0.81 - 0.85 to 80% - 90% (Good to Great)
+            score = 80.0 + (rawSimilarity - 0.81) / 0.04 * 10.0;
+        } else {
+            // Map 0.85+ to 90% - 100% (Outstanding)
+            score = 90.0 + (rawSimilarity - 0.85) / 0.05 * 10.0;
+        }
+        
+        // Clamp between 0 and 100 to be safe
+        score = Math.max(0.0, Math.min(100.0, score));
+        // Round to 2 decimal places
+        return Math.round(score * 100.0) / 100.0;
     }
 
     public String getResumeTextByUserId(Long userId) {
